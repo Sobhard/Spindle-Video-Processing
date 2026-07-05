@@ -18,12 +18,8 @@ def main():
     except AssertionError:
         print("Could not find video")
 
-    cv2.namedWindow("Original Frame", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow("Original Frame", 300, 400)
-    cv2.moveWindow("Original Frame", -20, 120)
-
     cv2.namedWindow("Masked Frame", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow("Masked Frame", 300, 400)
+    cv2.resizeWindow("Masked Frame", 600, 800)
 
     red_dot_tracker = DotTracker(
         10, Filters.RED_MASK_LOWER.np_array, Filters.RED_MASK_UPPER.np_array
@@ -38,9 +34,7 @@ def main():
         ret, frame = video.read()
 
         if ret:
-            cv2.imshow("Original Frame", frame)
-
-            dots = red_dot_tracker.process_frame(frame)
+            dots = red_dot_tracker.process_frame(frame, show_debug_frame=True)
             dots += yellow_dot_tracker.process_frame(frame)
             dots += green_dot_tracker.process_frame(frame)
 

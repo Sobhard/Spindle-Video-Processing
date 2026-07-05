@@ -5,6 +5,7 @@ This class processes individual frames and locates dots of a specific color
 import cv2
 import numpy as np
 from enum import Enum
+import csv
 
 
 class Filters(Enum):
@@ -96,7 +97,10 @@ class DotTracker:
         """
         masked_frame = self._apply_mask(frame)
         unlabeled_coordinates = self._get_dot_positions(masked_frame)
-        if len(unlabeled_coordinates) != 2:
+
+        if (
+            len(unlabeled_coordinates) != 2
+        ):  # TODO: Add a flag to determine which frames we get null values
             # print("More or less than 2 unlabeled coordinates")
             return None, None
 
@@ -128,7 +132,7 @@ class DotTracker:
 
             debug_frame = frame.copy()
             cv2.namedWindow("Tracker Debug", cv2.WINDOW_NORMAL)
-            cv2.resizeWindow("Tracker Debug", 300, 400)
+            cv2.resizeWindow("Tracker Debug", 600, 800)
             cv2.circle(debug_frame, (int(p1[0]), int(p1[1])), 5, (255, 255, 255), -1)
             cv2.putText(
                 debug_frame,
@@ -205,3 +209,117 @@ class DotTracker:
             self.prev_dot_B = p1
 
         return self.prev_dot_A, self.prev_dot_B
+
+
+class SpindleVideoProcessor:
+    """
+    Manages the video reading, coordinates the color trackers,
+    and handles exporting the data to a CSV file.
+    """
+
+    def __init__(self, brush_size: int = 5):
+        self.red_tracker = DotTracker(
+            brush_size=brush_size,
+            lower_filter=Filters.RED_MASK_LOWER.np_array,
+            upper_filter=Filters.RED_MASK_UPPER.np_array,
+        )
+        self.green_tracker = DotTracker(
+            brush_size=brush_size,
+            lower_filter=Filters.GREEN_MASK_LOWER.np_array,
+            upper_filter=Filters.GREEN_MASK_UPPER.np_array,
+        )
+        self.yellow_tracker = DotTracker(
+            brush_size=brush_size,
+            lower_filter=Filters.YELLOW_MASK_LOWER.np_array,
+            upper_filter=Filters.YELLOW_MASK_UPPER.np_array,
+        )
+
+    def _extract_xy(self, dot):
+        """Helper method to safely extract (x, y) and handle None values."""
+        if dot is None:
+            return ["", ""]  # Leave CSV cell blank if dot was lost
+        return [dot[0], dot[1]]
+
+    def format_data(self, output_path: str, timestamp: float, coordinates: list):
+        """
+        Writes a single row of tracked coordinates to the CSV file.
+        """
+        with open(output_path, mode="a", newline="") as file:
+            writer = csv.writer(file)
+            row = [round(timestamp, 4)] + coordinates
+            writer.writerow(row)
+
+    def process_video(self, video_path: str, output_csv_path: str, frequency: int = 30):
+        """
+        Processes the video frame-by-frame. Tracks colors at native framerate
+        to maintain mathematical state, but exports data at the requested frequency.
+        """
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            print(f"Error: Could not open video at {video_path}")
+            return
+
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+        # Determine the time intervals for our requested output frequency
+        output_interval = 1.0 / frequency
+        next_output_time = 0.0
+        frame_count = 0
+
+        with open(output_csv_path, mode="w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(
+                [
+                    "timestamp",
+                    "red_x1",
+                    "red_y1",
+                    "red_x2",
+                    "red_y2",
+                    "green_x1",
+                    "green_y1",
+                    "green_x2",
+                    "green_y2",
+                    "yellow_x1",
+                    "yellow_y1",
+                    "yellow_x2",
+                    "yellow_y2",
+                ]
+            )
+
+        print(
+            f"Processing video at {fps} native FPS. Outputting data at {frequency} Hz..."
+        )
+
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            red_A, red_B = self.red_tracker.process_frame(frame)
+            green_A, green_B = self.green_tracker.process_frame(frame)
+            yellow_A, yellow_B = self.yellow_tracker.process_frame(frame)
+
+            current_time = frame_count / fps
+
+            if current_time >= next_output_time:
+                row_coords = []
+                row_coords.extend(self._extract_xy(red_A))
+                row_coords.extend(self._extract_xy(red_B))
+                row_coords.extend(self._extract_xy(green_A))
+                row_coords.extend(self._extract_xy(green_B))
+                row_coords.extend(self._extract_xy(yellow_A))
+                row_coords.extend(self._extract_xy(yellow_B))
+
+                self.format_data(output_csv_path, current_time, row_coords)
+
+                next_output_time += output_interval
+
+            frame_count += 1
+
+            # Optional: Print progress to terminal
+            if frame_count % 100 == 0:
+                print(f"Processed {frame_count}/{total_frames} frames...")
+
+        cap.release()
+        print(f"Processing complete! Data saved to {output_csv_path}")
