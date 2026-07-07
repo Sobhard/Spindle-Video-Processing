@@ -187,10 +187,7 @@ class DotTracker:
             show_centroid_debug,  # TODO: Rework the centroid debug frame so it is actually useful
         )
 
-        if (
-            len(unlabeled_coordinates) != 2
-        ):  # TODO: Add a flag to determine which frames we get null values
-            # print("More or less than 2 unlabeled coordinates")
+        if len(unlabeled_coordinates) != 2:
             return None, None
 
         p1, p2 = unlabeled_coordinates
@@ -406,7 +403,6 @@ class SpindleVideoProcessor:
             if current_time >= next_output_time:
                 row_coords = []
                 row_coords.extend(self._extract_xyArea(red_A))
-                row_coords.extend(self._extract_xyArea(red_B))
                 row_coords.extend(self._extract_xyArea(red_B))
                 row_coords.extend(self._extract_xyArea(green_A))
                 row_coords.extend(self._extract_xyArea(green_B))
