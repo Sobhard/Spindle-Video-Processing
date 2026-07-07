@@ -128,7 +128,7 @@ class DotTracker:
             Clean masked image
         Returns:
             Two dimensional list of x, y positions of the centroid and the area of the convex hull
-            [[x1, y1, area1, contours], [x2, y2, area2, contours]]
+            [[x1, y1, area1, contour], [x2, y2, area2, contour]]
             Returns an empty list if no centroids found
 
         """
@@ -178,7 +178,7 @@ class DotTracker:
     ):
         """
         This function takes in a frame in BGR format and runs through the entire pipeline to produce 2 lists, one for each dot
-        The lists are in the format, [x, y, radius]. It uses the previous positions of the dots to ensure
+        The lists are in the format, [x, y, area, contour]. It uses the previous positions of the dots to ensure
         the values returned always correspond to the same dot on repeated uses.
         """
         masked_frame = self._apply_mask(frame)

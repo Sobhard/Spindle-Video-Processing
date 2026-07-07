@@ -1,0 +1,133 @@
+import os
+import re
+import cv2
+import numpy as np
+
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from tracker import Filters, DotTracker
+
+
+def analyze_failures(
+    input_folder: str = "Pipeline_Failures",
+    output_folder: str = "Pipeline_Failures_Output",
+):
+    """
+    Iterates through raw frames, applies the tracker.py logic,
+    and outputs the generated mask along with a text file containing
+    area and circularity data to the output folder.
+    """
+    if not os.path.exists(input_folder):
+        print(f"Directory '{input_folder}' not found.")
+        return
+
+    # Create an output directory for the masks and text files
+    os.makedirs(output_folder, exist_ok=True)
+
+    # Initialize trackers using your module's Filter enums
+    trackers = {
+        "RED": DotTracker(
+            brush_size=10,
+            lower_filter=Filters.RED_MASK_LOWER.np_array,
+            upper_filter=Filters.RED_MASK_UPPER.np_array,
+            name="RED",
+        ),
+        "GREEN": DotTracker(
+            brush_size=10,
+            lower_filter=Filters.GREEN_MASK_LOWER.np_array,
+            upper_filter=Filters.GREEN_MASK_UPPER.np_array,
+            name="GREEN",
+        ),
+        "YELLOW": DotTracker(
+            brush_size=10,
+            lower_filter=Filters.YELLOW_MASK_LOWER.np_array,
+            upper_filter=Filters.YELLOW_MASK_UPPER.np_array,
+            name="YELLOW",
+        ),
+    }
+
+    # Regex to extract frame number and color from filenames
+    pattern = re.compile(r"frame_(\d+)_([A-Z]+)_raw\.png")
+
+    for filename in sorted(os.listdir(input_folder)):
+        match = pattern.match(filename)
+        if not match:
+            continue
+
+        frame_num = match.group(1)
+        color = match.group(2)
+
+        if color not in trackers:
+            print(f"Skipping {filename}: Color '{color}' not recognized.")
+            continue
+
+        tracker = trackers[color]
+        img_path = os.path.join(input_folder, filename)
+        frame = cv2.imread(img_path)
+
+        if frame is None:
+            print(f"Failed to read image: {filename}")
+            continue
+
+        # 1. Use the module's function to generate the mask
+        masked_frame = tracker._apply_mask(frame)
+
+        # Base name for output files
+        base_output_name = f"frame_{frame_num}_{color}"
+
+        # Save the mask to the output folder
+        mask_filename = f"{base_output_name}_mask.png"
+        cv2.imwrite(os.path.join(output_folder, mask_filename), masked_frame)
+
+        # 2. Extract contours to calculate area and circularity
+        contours, _ = cv2.findContours(
+            masked_frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
+
+        # 3. Create and write to the text file
+        txt_filename = f"{base_output_name}_data.txt"
+        txt_path = os.path.join(output_folder, txt_filename)
+
+        with open(txt_path, "w") as f:
+            f.write(f"--- Frame {frame_num} | Color: {color} ---\n\n")
+
+            if not contours:
+                f.write("No contours found in the mask.\n")
+            else:
+                for i, contour in enumerate(contours):
+                    # Apply the same convex hull logic
+                    hull = cv2.convexHull(contour)
+                    area = cv2.contourArea(hull)
+
+                    # Prevent division by zero
+                    perimeter = cv2.arcLength(hull, True)
+                    if perimeter == 0:
+                        f.write(f"Contour {i}:\n")
+                        f.write(f"  - Area: {area:.2f}\n")
+                        f.write(f"  - Circularity: N/A (Perimeter is 0)\n\n")
+                        continue
+
+                    # Use the module's circularity function
+                    circularity = tracker._calc_circularity(hull, area)
+
+                    # Evaluate against your module's default thresholds
+                    area_status = "PASS" if area > tracker.MIN_CONTOUR_AREA else "FAIL"
+                    circ_status = (
+                        "PASS" if circularity > tracker.MIN_CIRCULARITY else "FAIL"
+                    )
+
+                    f.write(f"Contour {i}:\n")
+                    f.write(f"  - Area:        {area:.2f} ({area_status})\n")
+                    f.write(f"  - Circularity: {circularity:.4f} ({circ_status})\n\n")
+
+        print(f"Processed {filename} -> Exported mask and data.")
+
+    print(f"\n✅ All debug files saved to '{output_folder}'.")
+
+
+if __name__ == "__main__":
+    analyze_failures()
