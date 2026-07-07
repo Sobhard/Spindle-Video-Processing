@@ -29,22 +29,26 @@ def main():
     cv2.resizeWindow("Masked Frame", 600, 800)
 
     red_dot_tracker = DotTracker(
-        10, Filters.RED_MASK_LOWER.np_array, Filters.RED_MASK_UPPER.np_array
+        10, Filters.RED_MASK_LOWER.np_array, Filters.RED_MASK_UPPER.np_array, "RED"
     )
     yellow_dot_tracker = DotTracker(
-        10, Filters.YELLOW_MASK_LOWER.np_array, Filters.YELLOW_MASK_UPPER.np_array
+        10,
+        Filters.YELLOW_MASK_LOWER.np_array,
+        Filters.YELLOW_MASK_UPPER.np_array,
+        "YELLOW",
     )
     green_dot_tracker = DotTracker(
-        10, Filters.GREEN_MASK_LOWER.np_array, Filters.GREEN_MASK_UPPER.np_array
+        10,
+        Filters.GREEN_MASK_LOWER.np_array,
+        Filters.GREEN_MASK_UPPER.np_array,
+        "GREEN",
     )
     while video.isOpened():
         ret, frame = video.read()
 
         if ret:
-            dots = red_dot_tracker.process_frame(
-                frame, show_tracking_debug=True, show_centroid_debug=False
-            )
-            dots += yellow_dot_tracker.process_frame(frame)
+            dots = red_dot_tracker.process_frame(frame)
+            dots += yellow_dot_tracker.process_frame(frame, show_tracking_debug=True)
             dots += green_dot_tracker.process_frame(frame)
 
             swap = False
@@ -61,7 +65,7 @@ def main():
 
                     cv2.imshow("Masked Frame", frame)
 
-            key = cv2.waitKey(0)
+            key = cv2.waitKey(10)
             if key == ord("q"):
                 break
 

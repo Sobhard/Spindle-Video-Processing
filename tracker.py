@@ -46,6 +46,7 @@ class DotTracker:
         brush_size: int,
         lower_filter: np.ndarray,
         upper_filter: np.ndarray,
+        name: str,
         min_contour_area: int = 1000,
         min_circularity: float = 0.84,
     ):
@@ -57,6 +58,8 @@ class DotTracker:
         self.UPPER_FILTER = upper_filter
         self.prev_dot_A = None
         self.prev_dot_B = None
+        self.contour = 0
+        self.name = name
 
     def _apply_mask(self, frame: np.ndarray) -> np.ndarray:
         """Applies a the image mask to the frame and then cleans up the mask"""
@@ -311,16 +314,19 @@ class SpindleVideoProcessor:
             brush_size=brush_size,
             lower_filter=Filters.RED_MASK_LOWER.np_array,
             upper_filter=Filters.RED_MASK_UPPER.np_array,
+            name="RED",
         )
         self.green_tracker = DotTracker(
             brush_size=brush_size,
             lower_filter=Filters.GREEN_MASK_LOWER.np_array,
             upper_filter=Filters.GREEN_MASK_UPPER.np_array,
+            name="GREEN",
         )
         self.yellow_tracker = DotTracker(
             brush_size=brush_size,
             lower_filter=Filters.YELLOW_MASK_LOWER.np_array,
             upper_filter=Filters.YELLOW_MASK_UPPER.np_array,
+            name="YELLOW",
         )
         self.decimal_precision = precision
         self.missing_values = 0
