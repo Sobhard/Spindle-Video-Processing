@@ -41,7 +41,7 @@ class DotTracker:
         brush_size: int,
         lower_filter: np.ndarray,
         upper_filter: np.ndarray,
-        min_contour_area: int = 100,
+        min_contour_area: int = 1000,
     ):
         # Brush Size for Cleaning Up Artifacts (larger brush = larger artifacts are cleaned up)
         self.BRUSH_SIZE = brush_size
@@ -165,7 +165,10 @@ class DotTracker:
         """
         masked_frame = self._apply_mask(frame)
         unlabeled_coordinates = self._find_centroid(
-            masked_frame, self.MIN_CONTOUR_AREA, True, show_centroid_debug
+            masked_frame,
+            self.MIN_CONTOUR_AREA,
+            True,
+            show_centroid_debug,  # TODO: Rework the centroid debug frame so it is actually useful
         )
 
         if (
@@ -284,10 +287,11 @@ class DotTracker:
 class SpindleVideoProcessor:
     """
     Manages the video reading, coordinates the color trackers,
-    and handles exporting the data to a CSV file.
+    and handles exporting the data to a CSV file. Precision controls
+    the decimal places of each entry
     """
 
-    def __init__(self, brush_size: int = 5):
+    def __init__(self, brush_size: int = 5, precision: int = 3):
         self.red_tracker = DotTracker(
             brush_size=brush_size,
             lower_filter=Filters.RED_MASK_LOWER.np_array,
@@ -303,12 +307,15 @@ class SpindleVideoProcessor:
             lower_filter=Filters.YELLOW_MASK_LOWER.np_array,
             upper_filter=Filters.YELLOW_MASK_UPPER.np_array,
         )
+        self.decimal_precision = precision
+        self.missing_values = 0
 
-    def _extract_xy(self, dot):
-        """Helper method to safely extract (x, y) and handle None values."""
+    def _extract_xyArea(self, dot):
+        """Helper method to safely extract (x, y, area) and handle None values."""
         if dot is None:
-            return ["", ""]  # Leave CSV cell blank if dot was lost
-        return [dot[0], dot[1]]
+            self.missing_values += 3
+            return ["", "", ""]  # Leave CSV cell blank if dot was lost
+        return [round(val, self.decimal_precision) for val in dot[:3]]
 
     def format_data(self, output_path: str, timestamp: float, coordinates: list):
         """
@@ -344,16 +351,22 @@ class SpindleVideoProcessor:
                     "timestamp",
                     "red_x1",
                     "red_y1",
+                    "red_area1",
                     "red_x2",
                     "red_y2",
+                    "red_area2",
                     "green_x1",
                     "green_y1",
+                    "green_area1",
                     "green_x2",
                     "green_y2",
+                    "green_area2",
                     "yellow_x1",
                     "yellow_y1",
+                    "yellow_area1",
                     "yellow_x2",
                     "yellow_y2",
+                    "yellow_area2",
                 ]
             )
 
@@ -374,12 +387,13 @@ class SpindleVideoProcessor:
 
             if current_time >= next_output_time:
                 row_coords = []
-                row_coords.extend(self._extract_xy(red_A))
-                row_coords.extend(self._extract_xy(red_B))
-                row_coords.extend(self._extract_xy(green_A))
-                row_coords.extend(self._extract_xy(green_B))
-                row_coords.extend(self._extract_xy(yellow_A))
-                row_coords.extend(self._extract_xy(yellow_B))
+                row_coords.extend(self._extract_xyArea(red_A))
+                row_coords.extend(self._extract_xyArea(red_B))
+                row_coords.extend(self._extract_xyArea(red_B))
+                row_coords.extend(self._extract_xyArea(green_A))
+                row_coords.extend(self._extract_xyArea(green_B))
+                row_coords.extend(self._extract_xyArea(yellow_A))
+                row_coords.extend(self._extract_xyArea(yellow_B))
 
                 self.format_data(output_csv_path, current_time, row_coords)
 
@@ -392,4 +406,6 @@ class SpindleVideoProcessor:
                 print(f"Processed {frame_count}/{total_frames} frames...")
 
         cap.release()
-        print(f"Processing complete! Data saved to {output_csv_path}")
+        print(
+            f"Processing complete! Data saved to {output_csv_path}\nMissing Values = f{self.missing_values}"
+        )
