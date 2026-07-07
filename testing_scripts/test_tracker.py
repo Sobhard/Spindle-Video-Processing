@@ -1,5 +1,12 @@
 """Tests the tracker.py class"""
 
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+
 import numpy as np
 import cv2
 from tracker import DotTracker, Filters
@@ -34,7 +41,9 @@ def main():
         ret, frame = video.read()
 
         if ret:
-            dots = red_dot_tracker.process_frame(frame, show_debug_frame=True)
+            dots = red_dot_tracker.process_frame(
+                frame, show_tracking_debug=True, show_centroid_debug=False
+            )
             dots += yellow_dot_tracker.process_frame(frame)
             dots += green_dot_tracker.process_frame(frame)
 
@@ -42,12 +51,11 @@ def main():
             for dot in dots:
                 if dot != None:
                     if swap:
-                        cv2.circle(frame, (int(dot[0]), int(dot[1])), dot[2], GREEN, 4)
+                        cv2.drawContours(frame, [dot[3]], -1, GREEN, 4)
                         cv2.circle(frame, (int(dot[0]), int(dot[1])), 2, GREEN, 8)
                         swap = False
-
                     else:
-                        cv2.circle(frame, (int(dot[0]), int(dot[1])), dot[2], BLUE, 4)
+                        cv2.drawContours(frame, [dot[3]], -1, BLUE, 4)
                         cv2.circle(frame, (int(dot[0]), int(dot[1])), 2, BLUE, 8)
                         swap = True
 

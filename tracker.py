@@ -17,7 +17,7 @@ class Filters(Enum):
     # RED_MASK_LOWER_2 = [167, 114, 154] #Secondary Red filters which are not needed
     # RED_MASK_UPPER_2 = [179, 255, 255]
 
-    GREEN_MASK_LOWER = [60, 50, 20]
+    GREEN_MASK_LOWER = [60, 50, 30]
     GREEN_MASK_UPPER = [95, 255, 182]
 
     YELLOW_MASK_LOWER = [20, 77, 140]
@@ -37,10 +37,15 @@ class DotTracker:
     """This class contains methods to process individual frames from the spindle video"""
 
     def __init__(
-        self, brush_size: int, lower_filter: np.ndarray, upper_filter: np.ndarray
+        self,
+        brush_size: int,
+        lower_filter: np.ndarray,
+        upper_filter: np.ndarray,
+        min_contour_area: int = 100,
     ):
         # Brush Size for Cleaning Up Artifacts (larger brush = larger artifacts are cleaned up)
         self.BRUSH_SIZE = brush_size
+        self.MIN_CONTOUR_AREA = min_contour_area
         self.LOWER_FILTER = lower_filter
         self.UPPER_FILTER = upper_filter
         self.prev_dot_A = None
@@ -62,7 +67,7 @@ class DotTracker:
 
         return masked_frame
 
-    def _get_dot_positions(self, masked_frame: np.ndarray) -> list:
+    def _find_circle_center(self, masked_frame: np.ndarray) -> list:
         """
         Runs an algorithm on a clean masked frame to find the center of the dot
         1. Finds contours in the masked image
@@ -81,7 +86,7 @@ class DotTracker:
         )  # TODO: See if changing to chain_approx_none improves data
 
         coordinates = []
-        for i, contour in enumerate(contours):
+        for contour in enumerate(contours):
             area = cv2.contourArea(contour)
             if area > 50:
                 (x, y), radius = cv2.minEnclosingCircle(contour)
@@ -89,14 +94,79 @@ class DotTracker:
 
         return coordinates
 
-    def process_frame(self, frame: np.ndarray, show_debug_frame: bool = False):
+    def _find_centroid(
+        self,
+        masked_frame: np.ndarray,
+        min_contour_area: int,
+        use_hull: bool = True,
+        show_debug_frame: bool = False,
+    ) -> list:
+        """
+        Runs an algorithm on a clean masked frame to find the centriod of a dot
+        1. Finds the contours in a masked image
+        2. Any contours smaller than the min contour area will be discarded
+        3. Finds the convex hull of the contours (if use_hull=False we just use the raw contours)
+        4. Finds the centroid of the contour
+
+        Args:
+            Clean masked image
+        Returns:
+            Two dimensional list of x, y positions of the centroid and the area of the convex hull
+            [[x1, y1, area1, contours], [x2, y2, area2, contours]]
+            Returns an empty list if no centroids found
+
+        """
+
+        contours, _ = cv2.findContours(
+            masked_frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
+        coordinates = []
+
+        for contour in contours:
+
+            if use_hull:
+                contour = cv2.convexHull(contour)
+
+            contour_area = cv2.contourArea(contour)
+
+            if contour_area > min_contour_area:
+
+                moments = cv2.moments(contour)
+
+                if abs(moments["m00"]) < 1e-8:
+                    continue
+
+                c_x = moments["m10"] / moments["m00"]
+                c_y = moments["m01"] / moments["m00"]
+
+                coordinates.append(
+                    [float(c_x), float(c_y), float(contour_area), contour]
+                )
+
+        if show_debug_frame:
+            debug_img = np.zeros_like(masked_frame)
+            for obj in coordinates:
+                cv2.drawContours(debug_img, obj[3], -1, 255, 2)
+                cv2.circle(debug_img, (int(obj[0]), int(obj[1])), 4, 128, -1)
+                cv2.imshow("Contour Drawing", debug_img)
+
+        return coordinates
+
+    def process_frame(
+        self,
+        frame: np.ndarray,
+        show_tracking_debug: bool = False,
+        show_centroid_debug: bool = False,
+    ):
         """
         This function takes in a frame in BGR format and runs through the entire pipeline to produce 2 lists, one for each dot
         The lists are in the format, [x, y, radius]. It uses the previous positions of the dots to ensure
         the values returned always correspond to the same dot on repeated uses.
         """
         masked_frame = self._apply_mask(frame)
-        unlabeled_coordinates = self._get_dot_positions(masked_frame)
+        unlabeled_coordinates = self._find_centroid(
+            masked_frame, self.MIN_CONTOUR_AREA, True, show_centroid_debug
+        )
 
         if (
             len(unlabeled_coordinates) != 2
@@ -127,7 +197,7 @@ class DotTracker:
         dist_p1_to_B = np.linalg.norm(np.array(p1[:2]) - np.array(self.prev_dot_A[:2]))
         max_dist_arrangement_2 = max(dist_p2_to_A, dist_p1_to_B)
 
-        if show_debug_frame:
+        if show_tracking_debug:
             # Shows a frame that helps debug any tracking errors
 
             debug_frame = frame.copy()
