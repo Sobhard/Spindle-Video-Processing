@@ -34,7 +34,11 @@ class Filters(Enum):
 
 
 class DotTracker:
-    """This class contains methods to process individual frames from the spindle video"""
+    """This class contains methods to process individual frames from the spindle video
+
+    **min_contour_area**: Any objects smaller than this area (in pixels^2) are filtered out (default=1000)\n
+    **brush_size**: Any fragments or artifacts left after the mask that are smaller than the brush_size are filtered out
+    """
 
     def __init__(
         self,
@@ -287,8 +291,10 @@ class DotTracker:
 class SpindleVideoProcessor:
     """
     Manages the video reading, coordinates the color trackers,
-    and handles exporting the data to a CSV file. Precision controls
-    the decimal places of each entry
+    and handles exporting the data to a CSV file.
+
+    **brush_size**:  Any fragments or artifacts left after the mask that are smaller than the brush_size are filtered out
+    **precision**: Decimal places that values are rounded to
     """
 
     def __init__(self, brush_size: int = 5, precision: int = 3):
