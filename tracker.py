@@ -329,7 +329,7 @@ class SpindleVideoProcessor:
         """
         with open(output_path, mode="a", newline="") as file:
             writer = csv.writer(file)
-            row = [round(timestamp, 4)] + coordinates
+            row = [round(timestamp, self.decimal_precision)] + coordinates
             writer.writerow(row)
 
     def process_video(self, video_path: str, output_csv_path: str, frequency: int = 30):
