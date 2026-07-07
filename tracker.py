@@ -93,7 +93,7 @@ class DotTracker:
         )  # TODO: See if changing to chain_approx_none improves data
 
         coordinates = []
-        for contour in enumerate(contours):
+        for contour in contours:
             area = cv2.contourArea(contour)
             if area > 50:
                 (x, y), radius = cv2.minEnclosingCircle(contour)
