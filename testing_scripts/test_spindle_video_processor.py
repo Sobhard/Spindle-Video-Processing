@@ -7,7 +7,7 @@ sys.path.insert(0, str(ROOT))
 from tracker import SpindleVideoProcessor
 
 if __name__ == "__main__":
-    pipeline = SpindleVideoProcessor(brush_size=10)
+    pipeline = SpindleVideoProcessor(brush_size=10, precision=3)
 
     pipeline.process_video(
         video_path="test_data/spindle_video.mp4",

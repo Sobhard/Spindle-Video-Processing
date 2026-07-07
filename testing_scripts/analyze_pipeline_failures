@@ -126,7 +126,7 @@ def analyze_failures(
 
         print(f"Processed {filename} -> Exported mask and data.")
 
-    print(f"\n✅ All debug files saved to '{output_folder}'.")
+    print(f"\nAll debug files saved to '{output_folder}'.")
 
 
 if __name__ == "__main__":

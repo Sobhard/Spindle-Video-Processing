@@ -48,7 +48,7 @@ class DotTracker:
         upper_filter: np.ndarray,
         name: str,
         min_contour_area: int = 1000,
-        min_circularity: float = 0.84,
+        min_circularity: float = 0.80,
     ):
         # Brush Size for Cleaning Up Artifacts (larger brush = larger artifacts are cleaned up)
         self.BRUSH_SIZE = brush_size
@@ -463,5 +463,5 @@ class SpindleVideoProcessor:
 
         cap.release()
         print(
-            f"Processing complete! Data saved to {output_csv_path}\nMissing Values = f{self.missing_values}"
+            f"Processing complete! Data saved to {output_csv_path}\nMissing Values = {self.missing_values}"
         )
