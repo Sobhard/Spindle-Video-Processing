@@ -213,7 +213,7 @@ class DotTracker:
 
         # arrangement 2
         dist_p2_to_A = np.linalg.norm(np.array(p2[:2]) - np.array(self.prev_dot_A[:2]))
-        dist_p1_to_B = np.linalg.norm(np.array(p1[:2]) - np.array(self.prev_dot_A[:2]))
+        dist_p1_to_B = np.linalg.norm(np.array(p1[:2]) - np.array(self.prev_dot_B[:2]))
         max_dist_arrangement_2 = max(dist_p2_to_A, dist_p1_to_B)
 
         if show_tracking_debug:
@@ -225,11 +225,47 @@ class DotTracker:
             cv2.circle(debug_frame, (int(p1[0]), int(p1[1])), 5, (255, 255, 255), -1)
             cv2.putText(
                 debug_frame,
+                f"p1: ({int(p1[0])}, {int(p1[1])}), p2: (f{int(p2[0])}, {int(p2[0])})",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                (0, 0, 255),
+                3,
+            )
+            cv2.putText(
+                debug_frame,
+                f"prev_dot_A: ({int(self.prev_dot_A[0])}, {int(self.prev_dot_A[1])}) prev_dot_B: ({int(self.prev_dot_B[0])}, {int(self.prev_dot_B[1])})",
+                (10, 80),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                (0, 0, 255),
+                3,
+            )
+            cv2.putText(
+                debug_frame,
+                f"dist_p1_to_A: {int(dist_p1_to_A)}, dist_p2_to_B {int(dist_p1_to_B)}, max_dist_arrangement_1: {int(max_dist_arrangement_1)}",
+                (10, 130),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                (0, 0, 255),
+                3,
+            )
+            cv2.putText(
+                debug_frame,
+                f"dist_p1_to_B: {int(dist_p1_to_B)}, dist_p2_to_A {int(dist_p1_to_A)}, max_dist_arrangement_2: {int(max_dist_arrangement_2)}",
+                (10, 180),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                (0, 0, 255),
+                3,
+            )
+            cv2.putText(
+                debug_frame,
                 "p1",
                 (int(p1[0]) + 10, int(p1[1]) - 10),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.5,
-                (255, 255, 255),
+                (0, 0, 0),
                 1,
             )
 
@@ -240,7 +276,7 @@ class DotTracker:
                 (int(p2[0]) + 10, int(p2[1]) - 10),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.5,
-                (255, 255, 255),
+                (0, 0, 0),
                 1,
             )
             cv2.circle(

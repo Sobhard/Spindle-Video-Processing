@@ -65,7 +65,7 @@ def main():
 
                     cv2.imshow("Masked Frame", frame)
 
-            key = cv2.waitKey(10)
+            key = cv2.waitKey(0)
             if key == ord("q"):
                 break
 
