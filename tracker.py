@@ -12,12 +12,12 @@ class Filters(Enum):
     """This enum contains tuned filters that work for the test data, not sure if they will generalize"""
 
     RED_MASK_LOWER = [0, 124, 104]
-    RED_MASK_UPPER = [10, 255, 255]
+    RED_MASK_UPPER = [12, 255, 255]
 
     # RED_MASK_LOWER_2 = [167, 114, 154] #Secondary Red filters which are not needed
     # RED_MASK_UPPER_2 = [179, 255, 255]
 
-    GREEN_MASK_LOWER = [60, 50, 30]
+    GREEN_MASK_LOWER = [60, 40, 30]
     GREEN_MASK_UPPER = [95, 255, 182]
 
     YELLOW_MASK_LOWER = [20, 77, 140]
@@ -37,7 +37,8 @@ class DotTracker:
     """This class contains methods to process individual frames from the spindle video
 
     **min_contour_area**: Any objects smaller than this area (in pixels^2) are filtered out (default=1000)\n
-    **brush_size**: Any fragments or artifacts left after the mask that are smaller than the brush_size are filtered out
+    **brush_size**: Any fragments or artifacts left after the mask that are smaller than the brush_size are filtered out\n
+    **circularity**: Any fragments with a circularity less than this threshold are filtered out (default=0.84)
     """
 
     def __init__(
@@ -46,10 +47,12 @@ class DotTracker:
         lower_filter: np.ndarray,
         upper_filter: np.ndarray,
         min_contour_area: int = 1000,
+        min_circularity: float = 0.84,
     ):
         # Brush Size for Cleaning Up Artifacts (larger brush = larger artifacts are cleaned up)
         self.BRUSH_SIZE = brush_size
         self.MIN_CONTOUR_AREA = min_contour_area
+        self.MIN_CIRCULARITY = min_circularity
         self.LOWER_FILTER = lower_filter
         self.UPPER_FILTER = upper_filter
         self.prev_dot_A = None
@@ -98,10 +101,16 @@ class DotTracker:
 
         return coordinates
 
+    def _calc_circularity(self, contour, area) -> float:
+        """Simple function to calculate circularity"""
+        perimeter = cv2.arcLength(contour, True)
+        return 4 * np.pi * area / (perimeter**2)
+
     def _find_centroid(
         self,
         masked_frame: np.ndarray,
         min_contour_area: int,
+        min_circularity: float,
         use_hull: bool = True,
         show_debug_frame: bool = False,
     ) -> list:
@@ -132,9 +141,11 @@ class DotTracker:
                 contour = cv2.convexHull(contour)
 
             contour_area = cv2.contourArea(contour)
+            circularity = self._calc_circularity(contour, contour_area)
 
-            if contour_area > min_contour_area:
+            if contour_area > min_contour_area and circularity > min_circularity:
 
+                # Use moments to find centroid
                 moments = cv2.moments(contour)
 
                 if abs(moments["m00"]) < 1e-8:
@@ -171,6 +182,7 @@ class DotTracker:
         unlabeled_coordinates = self._find_centroid(
             masked_frame,
             self.MIN_CONTOUR_AREA,
+            self.MIN_CIRCULARITY,
             True,
             show_centroid_debug,  # TODO: Rework the centroid debug frame so it is actually useful
         )
