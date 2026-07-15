@@ -27,6 +27,9 @@ class Filters(Enum):
     WHITE_MASK_LOWER = [81, 0, 208]
     WHITE_MASK_UPPER = [179, 60, 255]
 
+    CENTER_MASK_LOWER = [44, 0, 0]
+    CENTER_MASK_UPPER = [163, 71, 255]
+
     @property
     def np_array(self):
         """Returns the enum as a numpy array"""
@@ -47,6 +50,7 @@ class DotTracker:
         lower_filter: np.ndarray,
         upper_filter: np.ndarray,
         name: str,
+        num_dots: int = 2,
         min_contour_area: int = 1000,
         min_circularity: float = 0.80,
     ):
@@ -59,6 +63,7 @@ class DotTracker:
         self.prev_dot_A = None
         self.prev_dot_B = None
         self.contour = 0
+        self.num_dots = num_dots
         self.name = name
 
     def _apply_mask(self, frame: np.ndarray) -> np.ndarray:
@@ -170,7 +175,40 @@ class DotTracker:
 
         return coordinates
 
-    def process_frame(
+    def process_frame_center(self, frame: np.ndarray):
+        """
+        This function processes the frame, but only for the center, so it does not need tracking logic. Throws an error when used in a non-single dot pipeline.
+
+        **For best results, use with a very high circularity**
+
+        1. Masks frame
+        2. finds contours
+        3. Returns biggest contour
+        """
+
+        try:
+            assert self.num_dots == 1
+        except AssertionError:
+            print("process_frame_center should only be used when tracking a single dot")
+            return
+
+        masked_frame = self._apply_mask(frame)
+        unlabeled_coords = self._find_centroid(
+            masked_frame, self.MIN_CONTOUR_AREA, self.MIN_CIRCULARITY, True
+        )
+
+        if not unlabeled_coords:
+            return None
+
+        max_area = unlabeled_coords[0]
+
+        for n in unlabeled_coords:
+            if n[2] > max_area[2]:
+                max_area = n
+
+        return max_area
+
+    def process_frame_two_dots(
         self,
         frame: np.ndarray,
         show_tracking_debug: bool = False,
@@ -364,6 +402,17 @@ class SpindleVideoProcessor:
             upper_filter=Filters.YELLOW_MASK_UPPER.np_array,
             name="YELLOW",
         )
+
+        self.center_tracker = DotTracker(
+            brush_size=brush_size,
+            lower_filter=Filters.CENTER_MASK_LOWER.np_array,
+            upper_filter=Filters.CENTER_MASK_UPPER.np_array,
+            name="CENTER",
+            num_dots=1,
+            min_circularity=0.95,
+            min_contour_area=10000,
+        )
+
         self.decimal_precision = precision
         self.missing_values = 0
 
@@ -424,6 +473,9 @@ class SpindleVideoProcessor:
                     "yellow_x2",
                     "yellow_y2",
                     "yellow_area2",
+                    "center_x",
+                    "center_y",
+                    "center_area",
                 ]
             )
 
@@ -436,9 +488,10 @@ class SpindleVideoProcessor:
             if not ret:
                 break
 
-            red_A, red_B = self.red_tracker.process_frame(frame)
-            green_A, green_B = self.green_tracker.process_frame(frame)
-            yellow_A, yellow_B = self.yellow_tracker.process_frame(frame)
+            red_A, red_B = self.red_tracker.process_frame_two_dots(frame)
+            green_A, green_B = self.green_tracker.process_frame_two_dots(frame)
+            yellow_A, yellow_B = self.yellow_tracker.process_frame_two_dots(frame)
+            center = self.center_tracker.process_frame_center(frame)
 
             current_time = frame_count / fps
 
@@ -450,6 +503,7 @@ class SpindleVideoProcessor:
                 row_coords.extend(self._extract_xyArea(green_B))
                 row_coords.extend(self._extract_xyArea(yellow_A))
                 row_coords.extend(self._extract_xyArea(yellow_B))
+                row_coords.extend(self._extract_xyArea(center))
 
                 self.format_data(output_csv_path, current_time, row_coords)
 

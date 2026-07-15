@@ -1,5 +1,11 @@
 """Simple script for tuning the HSV Filter"""
 
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
 import cv2
 import numpy as np
 from tracker import DotTracker
@@ -19,11 +25,11 @@ def main():
 
     cv2.namedWindow("Trackbars")
 
-    cv2.createTrackbar("L - H", "Trackbars", 81, 179, lambda: None)
+    cv2.createTrackbar("L - H", "Trackbars", 39, 179, lambda: None)
     cv2.createTrackbar("L - S", "Trackbars", 0, 255, lambda: None)
-    cv2.createTrackbar("L - V", "Trackbars", 208, 255, lambda: None)
-    cv2.createTrackbar("U - H", "Trackbars", 179, 179, lambda: None)
-    cv2.createTrackbar("U - S", "Trackbars", 60, 255, lambda: None)
+    cv2.createTrackbar("L - V", "Trackbars", 29, 255, lambda: None)
+    cv2.createTrackbar("U - H", "Trackbars", 120, 179, lambda: None)
+    cv2.createTrackbar("U - S", "Trackbars", 255, 255, lambda: None)
     cv2.createTrackbar("U - V", "Trackbars", 255, 255, lambda: None)
 
     cv2.namedWindow("Frame", cv2.WINDOW_NORMAL)

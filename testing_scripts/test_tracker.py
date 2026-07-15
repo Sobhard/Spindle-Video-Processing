@@ -41,13 +41,28 @@ def main():
         Filters.GREEN_MASK_UPPER.np_array,
         "GREEN",
     )
+
+    center_dot_tracker = DotTracker(
+        10,
+        Filters.CENTER_MASK_LOWER.np_array,
+        Filters.CENTER_MASK_UPPER.np_array,
+        "center",
+        1,
+        10000,
+        0.95,
+    )
     while video.isOpened():
         ret, frame = video.read()
 
         if ret:
-            dots = red_dot_tracker.process_frame(frame)
-            dots += yellow_dot_tracker.process_frame(frame, show_tracking_debug=True)
-            dots += green_dot_tracker.process_frame(frame)
+            dots = red_dot_tracker.process_frame_two_dots(frame)
+            dots += yellow_dot_tracker.process_frame_two_dots(
+                frame, show_tracking_debug=True
+            )
+            dots += green_dot_tracker.process_frame_two_dots(frame)
+            center = center_dot_tracker.process_frame_center(frame)
+            if center is not None:
+                dots += tuple([center])
 
             swap = False
             for dot in dots:
