@@ -263,7 +263,7 @@ class DotTracker:
             cv2.circle(debug_frame, (int(p1[0]), int(p1[1])), 5, (255, 255, 255), -1)
             cv2.putText(
                 debug_frame,
-                f"p1: ({int(p1[0])}, {int(p1[1])}), p2: (f{int(p2[0])}, {int(p2[0])})",
+                f"p1: ({int(p1[0])}, {int(p1[1])}), p2: ({int(p2[0])}, {int(p2[1])})",
                 (10, 30),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.8,
