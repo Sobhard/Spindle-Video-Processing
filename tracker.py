@@ -11,8 +11,8 @@ import csv
 class Filters(Enum):
     """This enum contains tuned filters that work for the test data, not sure if they will generalize"""
 
-    RED_MASK_LOWER = [0, 124, 104]
-    RED_MASK_UPPER = [12, 255, 255]
+    RED_MASK_LOWER = [0, 124, 104]  # 124
+    RED_MASK_UPPER = [15, 255, 255]
 
     # RED_MASK_LOWER_2 = [167, 114, 154] #Secondary Red filters which are not needed
     # RED_MASK_UPPER_2 = [179, 255, 255]

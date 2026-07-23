@@ -25,10 +25,10 @@ def main():
 
     cv2.namedWindow("Trackbars")
 
-    cv2.createTrackbar("L - H", "Trackbars", 39, 179, lambda: None)
-    cv2.createTrackbar("L - S", "Trackbars", 0, 255, lambda: None)
-    cv2.createTrackbar("L - V", "Trackbars", 29, 255, lambda: None)
-    cv2.createTrackbar("U - H", "Trackbars", 120, 179, lambda: None)
+    cv2.createTrackbar("L - H", "Trackbars", 0, 179, lambda: None)
+    cv2.createTrackbar("L - S", "Trackbars", 124, 255, lambda: None)
+    cv2.createTrackbar("L - V", "Trackbars", 104, 255, lambda: None)
+    cv2.createTrackbar("U - H", "Trackbars", 12, 179, lambda: None)
     cv2.createTrackbar("U - S", "Trackbars", 255, 255, lambda: None)
     cv2.createTrackbar("U - V", "Trackbars", 255, 255, lambda: None)
 
